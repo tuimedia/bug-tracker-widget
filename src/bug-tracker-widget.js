@@ -175,9 +175,10 @@ class BugTrackerWidget extends LitElement {
           const presignRes = await fetch('/api/feedback/attachments/presign', {
             method: 'POST',
             credentials: 'include',
+            redirect: 'error',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ filename: file.name, contentType: file.type }),
-          })
+          }).catch(() => { throw new Error('Session expired — please refresh the page and try again.') })
           if (!presignRes.ok) throw new Error('Failed to get upload URL')
           const { url, s3Key } = await presignRes.json()
           const uploadRes = await fetch(url, {
