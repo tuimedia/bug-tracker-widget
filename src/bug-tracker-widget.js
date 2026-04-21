@@ -34,10 +34,12 @@ function savePersisted(data) {
 
 class BugTrackerWidget extends LitElement {
   static properties = {
+    // Public attributes
+    reporterEmail:        {},
+    reporterName:         {},
     // Internal state
     _menuOpen:            { state: true },
     _view:                { state: true },
-    _user:                { state: true },
     // Form
     _title:               { state: true },
     _stepsToReproduce:    { state: true },
@@ -65,9 +67,10 @@ class BugTrackerWidget extends LitElement {
   constructor() {
     super()
     const p = loadPersisted()
+    this.reporterEmail = ''
+    this.reporterName = ''
     this._menuOpen = false
     this._view = 'form'
-    this._user = null
     this._title = p.title || ''
     this._stepsToReproduce = p.stepsToReproduce || ''
     this._expectedBehaviour = p.expectedBehaviour || ''
@@ -88,11 +91,6 @@ class BugTrackerWidget extends LitElement {
     this._isOpen = false
   }
 
-  connectedCallback() {
-    super.connectedCallback()
-    this._fetchUser()
-  }
-
   _persist() {
     savePersisted({
       title: this._title,
@@ -102,13 +100,6 @@ class BugTrackerWidget extends LitElement {
       submittedUrl: this._submittedUrl,
       browser: this._browser,
     })
-  }
-
-  async _fetchUser() {
-    try {
-      const res = await fetch('/api/me', { credentials: 'include' })
-      if (res.ok) this._user = await res.json()
-    } catch {}
   }
 
   _openForm() {
@@ -128,10 +119,9 @@ class BugTrackerWidget extends LitElement {
   }
 
   async _fetchTickets() {
-    if (!this._user?.email) return
     this._ticketsStatus = 'loading'
     try {
-      const url = `/api/feedback/tickets/mine?reporterEmail=${encodeURIComponent(this._user.email)}&page=${this._ticketsPage}&limit=${PAGE_LIMIT}`
+      const url = `/api/feedback/tickets/mine?reporterEmail=${encodeURIComponent(this.reporterEmail)}&page=${this._ticketsPage}&limit=${PAGE_LIMIT}`
       const res = await fetch(url, { credentials: 'include' })
       if (!res.ok) throw new Error()
       const json = await res.json()
@@ -215,8 +205,8 @@ class BugTrackerWidget extends LitElement {
         ...(this._expectedBehaviour ? { expectedBehaviour: this._expectedBehaviour } : {}),
         ...(this._actualBehaviour ? { actualBehaviour: this._actualBehaviour } : {}),
         submittedUrl: this._submittedUrl,
-        reporterEmail: this._user?.email ?? null,
-        reporterName: this._user?.displayName ?? null,
+        reporterEmail: this.reporterEmail || null,
+        reporterName: this.reporterName || null,
         browser: this._browser || undefined,
         viewport: `${window.innerWidth}x${window.innerHeight}`,
         userAgent: navigator.userAgent,
@@ -285,8 +275,6 @@ class BugTrackerWidget extends LitElement {
   // ── Render ───────────────────────────────────────────────────
 
   render() {
-    if (!this._user?.isAdmin) return html``
-
     return html`
       ${!this._isOpen ? this._renderLauncher() : html``}
       ${this._isOpen ? this._renderPopup() : html``}
