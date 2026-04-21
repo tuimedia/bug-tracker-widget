@@ -304,7 +304,7 @@ class BugTrackerWidget extends LitElement {
           aria-label="Issue tracker menu"
         >
           ${this._iconMessage}
-          <span>Report issue <span class="trigger-sub">(admin only)</span></span>
+          <span>Report issue</span>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true" class=${classMap({ 'chevron': true, 'chevron--up': this._menuOpen })}>
             <path d="M18 15l-6-6-6 6"/>
           </svg>
@@ -609,8 +609,7 @@ class BugTrackerWidget extends LitElement {
     .trigger { display: flex; align-items: center; gap: 6px; padding: 8px 14px 8px 10px; background: #fff; color: #111; border: 1px solid rgba(0,0,0,0.12); border-radius: 100px; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.06); transition: transform 0.15s, box-shadow 0.15s, background 0.15s; }
     .trigger:hover { background: #f9fafb; transform: translateY(-1px); box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
     .trigger:active { transform: translateY(0); }
-    .trigger-sub { background: #f3f4f6; border-radius: 4px; padding: 1px 6px; font-size: 11px; font-weight: 500; color: #6b7280; }
-    .chevron { transition: transform 0.2s; }
+.chevron { transition: transform 0.2s; }
     .chevron--up { transform: rotate(180deg); }
 
     /* ── Popup ── */
