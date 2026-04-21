@@ -163,11 +163,11 @@ All requests go through your Symfony app at `/api/feedback/*`. See the [client b
 
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/api/feedback/tickets` | Submit a ticket |
-| `GET` | `/api/feedback/tickets/mine` | List the current user's tickets |
-| `GET` | `/api/feedback/tickets/mine/:id` | Get a single ticket |
-| `POST` | `/api/feedback/attachments/presign` | Get a presigned S3 upload URL |
-| `GET` | `/api/feedback/attachments/:id` | Retrieve an attachment (proxied redirect to S3) |
+| `POST` | `/api/feedback/public/tickets` | Submit a ticket |
+| `GET` | `/api/feedback/public/tickets/mine` | List the current user's tickets |
+| `GET` | `/api/feedback/public/tickets/mine/:id` | Get a single ticket |
+| `POST` | `/api/feedback/public/attachments/presign` | Get a presigned S3 upload URL |
+| `GET` | `/api/feedback/public/attachments/mine/:id` | Retrieve an attachment (proxied redirect to S3) |
 
 ---
 

@@ -121,7 +121,7 @@ class BugTrackerWidget extends LitElement {
   async _fetchTickets() {
     this._ticketsStatus = 'loading'
     try {
-      const url = `/api/feedback/tickets/mine?reporterEmail=${encodeURIComponent(this.reporterEmail)}&page=${this._ticketsPage}&limit=${PAGE_LIMIT}`
+      const url = `/api/feedback/public/tickets/mine?reporterEmail=${encodeURIComponent(this.reporterEmail)}&page=${this._ticketsPage}&limit=${PAGE_LIMIT}`
       const res = await fetch(url, { credentials: 'include' })
       if (!res.ok) throw new Error()
       const json = await res.json()
@@ -144,7 +144,7 @@ class BugTrackerWidget extends LitElement {
     this._showTechDetails = false
     this._view = 'issue-detail'
     try {
-      const res = await fetch(`/api/feedback/tickets/mine/${id}`, { credentials: 'include' })
+      const res = await fetch(`/api/feedback/public/tickets/mine/${id}`, { credentials: 'include' })
       if (!res.ok) throw new Error()
       this._selectedTicket = await res.json()
       this._selectedTicketStatus = 'idle'
@@ -172,7 +172,7 @@ class BugTrackerWidget extends LitElement {
     try {
       const attachmentS3Keys = await Promise.all(
         this._attachedFiles.map(async (file) => {
-          const presignRes = await fetch('/api/feedback/attachments/presign', {
+          const presignRes = await fetch('/api/feedback/public/attachments/presign', {
             method: 'POST',
             credentials: 'include',
             redirect: 'error',
@@ -215,7 +215,7 @@ class BugTrackerWidget extends LitElement {
         ...(attachmentS3Keys.length ? { attachmentS3Keys } : {}),
       }
 
-      const res = await fetch('/api/feedback/tickets', {
+      const res = await fetch('/api/feedback/public/tickets', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
