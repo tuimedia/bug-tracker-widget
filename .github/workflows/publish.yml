@@ -8,6 +8,7 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    if: github.repository == 'tuimedia/bug-tracker-widget'
     permissions:
       contents: read
       id-token: write
