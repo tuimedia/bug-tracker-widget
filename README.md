@@ -17,7 +17,6 @@ The widget proxies all requests through your app's backend. You'll need:
 
 1. A running [bug tracker API](https://github.com/tuimedia/deloitte-bug-tracker)
 2. [`tuimedia/bug-tracker-client-bundle`](https://github.com/tuimedia/bug-tracker-client-bundle) wired into your Symfony app
-3. A `/api/me` endpoint on your frontend that returns at least `{ email, displayName, isAdmin }` — the widget uses this to populate reporter details and to decide whether to render at all (only shown when `isAdmin: true`)
 
 ---
 
@@ -96,7 +95,6 @@ Admin UI available at `http://localhost:8090`.
 The bug tracker uploads screenshots to S3 using a UAT task role. Credentials expire after ~1 hour. Add a refresh script and wire it into your `docker-compose.yml`:
 
 ```bash
-# scripts/refresh-bug-tracker-creds.sh
 ./scripts/refresh-bug-tracker-creds.sh
 ```
 
@@ -130,10 +128,13 @@ pnpm add @tuimedia/bug-tracker-widget
 import '@tuimedia/bug-tracker-widget'
 ```
 
-Then add the element wherever you want it rendered (e.g. `App.vue`, `App.jsx`, or directly in HTML):
+Then add the element wherever you want it rendered, passing the current user's details as attributes. Control visibility however your app handles auth — the widget always renders when present in the DOM:
 
 ```html
-<bug-tracker-widget></bug-tracker-widget>
+<bug-tracker-widget
+  reporter-email="user@example.com"
+  reporter-name="Jane Smith"
+></bug-tracker-widget>
 ```
 
 In Vue, tell the compiler to treat it as a custom element so it doesn't warn about an unknown component:
@@ -149,12 +150,29 @@ vue({
 })
 ```
 
+A full Vue example:
+
+```vue
+<bug-tracker-widget
+  v-if="user?.isAdmin"
+  :reporter-email="user.email"
+  :reporter-name="user.displayName"
+></bug-tracker-widget>
+```
+
 #### Option B — script tag (plain HTML / no bundler)
 
 ```html
 <script type="module" src="/path/to/bug-tracker-widget.js"></script>
-<bug-tracker-widget></bug-tracker-widget>
+<bug-tracker-widget reporter-email="user@example.com" reporter-name="Jane Smith"></bug-tracker-widget>
 ```
+
+### Attributes
+
+| Attribute | Required | Description |
+|---|---|---|
+| `reporter-email` | No | Sent as `reporterEmail` on submission. The backend also overwrites this server-side as a spoofing guard. |
+| `reporter-name` | No | Sent as `reporterName` on submission. |
 
 ### Sentry integration (optional)
 
@@ -167,23 +185,6 @@ Sentry.init({ /* ... */ })
 
 window.Sentry = Sentry
 ```
-
----
-
-## How the widget decides what to show
-
-The widget calls `GET /api/me` (with `credentials: 'include'`) on mount. It expects a response like:
-
-```json
-{
-  "email": "user@example.com",
-  "displayName": "Jane Smith",
-  "isAdmin": true
-}
-```
-
-- If `isAdmin` is `false` or the request fails, the widget renders nothing
-- `email` and `displayName` are sent as `reporterEmail` / `reporterName` on ticket submission (the backend also overwrites `reporterEmail` server-side as a second layer of protection)
 
 ---
 
