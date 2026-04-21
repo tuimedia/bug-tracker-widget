@@ -133,16 +133,25 @@ Add to your project's `.npmrc` (create it if it doesn't exist):
 
 ```
 @tuimedia:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
 ```
 
-You'll need a GitHub personal access token with `read:packages` scope. For CI, use a repository secret.
+You'll need a GitHub personal access token with `read:packages` scope. In GitHub Actions, `GITHUB_TOKEN` is provided automatically — no extra secret needed. For local development, set `GITHUB_TOKEN` in your shell or replace the variable with your PAT directly (but don't commit it).
 
 ### Install
 
 ```bash
 pnpm add @tuimedia/bug-tracker-widget
 ```
+
+> **pnpm `minimumReleaseAge`**: if your project has a `minimumReleaseAge` set in `pnpm-workspace.yaml`, newly published versions will be blocked until the age window passes. Add an exclusion to install immediately:
+> ```yaml
+> # pnpm-workspace.yaml
+> minimumReleaseAgeExclude:
+>   - '@tuimedia/bug-tracker-widget'
+> ```
+
+> **CI `pnpm install`**: ensure `GITHUB_TOKEN` (or your PAT as a secret) is set in the environment when `pnpm install` runs, so the registry auth in `.npmrc` resolves correctly.
 
 ### Add to your app
 
