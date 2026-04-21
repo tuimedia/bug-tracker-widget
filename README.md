@@ -76,13 +76,6 @@ pnpm add @tuimedia/bug-tracker-widget
 npm install @tuimedia/bug-tracker-widget
 ```
 
-> **pnpm `minimumReleaseAge`**: if your project has a `minimumReleaseAge` set in `pnpm-workspace.yaml`, newly published versions will be blocked until the age window passes. Add an exclusion to install immediately:
-> ```yaml
-> # pnpm-workspace.yaml
-> minimumReleaseAgeExclude:
->   - '@tuimedia/bug-tracker-widget'
-> ```
-
 ### Add to your app
 
 #### Option A — import in your JS entry point (recommended for Vite projects)
