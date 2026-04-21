@@ -74,9 +74,34 @@ services:
   bug-tracker-app:
     image: 076917342673.dkr.ecr.eu-west-1.amazonaws.com/deloitte-bug-tracker:dev
     pull_policy: always
+    platform: linux/amd64
     profiles: [bug-tracker]
     ports:
       - "8090:80"
+    volumes:
+      # Run ./scripts/refresh-bug-tracker-creds.sh to populate — expires after 1h, no restart needed
+      - ./.aws:/home/www-data/.aws:ro
+    tmpfs:
+      - /var/www/app/var/cache
+    environment:
+      APP_SECRET: devbugtrackersecret1234567890abcd
+      APP_DATABASE_HOST: db                         # your db service name
+      APP_DATABASE_NAME: bug_tracker
+      APP_DATABASE_USER: pocuser                    # your db user
+      APP_DATABASE_PASSWORD: pocpass                # your db password
+      APP_DATABASE_ROOT_PASSWORD: hairnet           # your db root password
+      APP_AWS_REGION: eu-west-1
+      APP_SCREENSHOT_BUCKET: deloitte-bug-tracker-screenshots
+      APP_SCREENSHOT_PREFIX: dev
+      AWS_SHARED_CREDENTIALS_FILE: /home/www-data/.aws/bug-tracker-credentials
+      APP_CREDS_REFRESH_CMD: ./scripts/refresh-bug-tracker-creds.sh
+      MAILER_DSN: smtp://mailer:1025                # your mailer service
+      MAILER_FROM: no-reply@tickets.example.com
+      SENTRY_DSN: ''
+      MESSENGER_TRANSPORT_DSN: doctrine://default?auto_setup=0
+    depends_on:
+      - db
+      - mailer
 ```
 
 Authenticate with ECR, then start:
