@@ -1,0 +1,18 @@
+{
+  "name": "@tuimedia/bug-tracker-widget",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/bug-tracker-widget.js",
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c --watch"
+  },
+  "dependencies": {
+    "lit": "^3.0.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^15.0.0",
+    "@rollup/plugin-terser": "^0.4.0",
+    "rollup": "^4.0.0"
+  }
+}
