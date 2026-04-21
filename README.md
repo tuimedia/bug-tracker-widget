@@ -136,7 +136,13 @@ Add to your project's `.npmrc` (create it if it doesn't exist):
 //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
 ```
 
-You'll need a GitHub personal access token with `read:packages` scope. In GitHub Actions, `GITHUB_TOKEN` is provided automatically — no extra secret needed. For local development, set `GITHUB_TOKEN` in your shell or replace the variable with your PAT directly (but don't commit it).
+You'll need a GitHub personal access token with `read:packages` scope. For local development, set `GITHUB_TOKEN` in your shell profile (e.g. `~/.zshrc`):
+
+```bash
+export GITHUB_TOKEN=$(gh auth token)
+```
+
+Without this, pnpm will warn on every command that it can't resolve `${GITHUB_TOKEN}` — the dev server still works, but the warning is noisy.
 
 ### Install
 
@@ -151,7 +157,31 @@ pnpm add @tuimedia/bug-tracker-widget
 >   - '@tuimedia/bug-tracker-widget'
 > ```
 
-> **CI `pnpm install`**: ensure `GITHUB_TOKEN` (or your PAT as a secret) is set in the environment when `pnpm install` runs, so the registry auth in `.npmrc` resolves correctly.
+### CI / Docker builds
+
+If your frontend is built inside Docker, declare `GITHUB_TOKEN` as a build arg so pnpm can authenticate:
+
+```dockerfile
+# Dockerfile
+FROM node:20-alpine as frontend-build
+
+ARG GITHUB_TOKEN
+
+WORKDIR /frontend
+RUN npm install -g pnpm@latest-10
+COPY frontend/ ./
+RUN pnpm install --frozen-lockfile
+```
+
+Then pass it from your GitHub Actions workflow — `GITHUB_TOKEN` is provided automatically with `read:packages` on the same org, no extra secret needed:
+
+```yaml
+- name: Build and push image
+  uses: docker/build-push-action@v6
+  with:
+    build-args: |
+      GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+```
 
 ### Add to your app
 
