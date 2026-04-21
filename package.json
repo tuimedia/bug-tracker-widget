@@ -3,9 +3,16 @@
   "version": "0.1.0",
   "type": "module",
   "main": "dist/bug-tracker-widget.js",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "rollup -c",
-    "dev": "rollup -c --watch"
+    "dev": "rollup -c --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   },
   "dependencies": {
     "lit": "^3.0.0"
