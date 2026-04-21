@@ -171,7 +171,7 @@ Then add the element wherever you want it rendered, passing the current user's d
 ></bug-tracker-widget>
 ```
 
-In Vue, tell the compiler to treat it as a custom element so it doesn't warn about an unknown component:
+In Vue, tell the compiler to treat it as a native custom element. Without this, Vue will warn at runtime that `bug-tracker-widget` is an unknown component — the widget will still work, but the warning appears because Vue's template compiler tries to resolve it as a Vue component before the custom element registry is checked:
 
 ```js
 // vite.config.js
