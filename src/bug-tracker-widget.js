@@ -129,7 +129,7 @@ class BugTrackerWidget extends LitElement {
   }
 
   _parseStatusFilter() {
-    if (!this.statusFilter) return []
+    if (!this.statusFilter) return ['open', 'in_progress', 'resolved']
     return this.statusFilter
       .split(',')
       .map(s => s.trim())
