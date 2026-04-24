@@ -3,6 +3,8 @@ import { classMap } from 'lit/directives/class-map.js'
 
 const STORAGE_KEY = 'bug-tracker-widget'
 const PAGE_LIMIT = 10
+const ALL_STATUSES = ['open', 'in_progress', 'resolved', 'closed']
+const STATUS_LABELS = { open: 'Open', in_progress: 'In progress', resolved: 'Resolved', closed: 'Closed' }
 
 function detectBrowser() {
   const ua = navigator.userAgent
@@ -56,6 +58,7 @@ class BugTrackerWidget extends LitElement {
     _ticketsStatus:       { state: true },
     _ticketsPage:         { state: true },
     _ticketsTotal:        { state: true },
+    _activeStatuses:      { state: true },
     // Issue detail
     _selectedTicket:      { state: true },
     _selectedTicketStatus:{ state: true },
@@ -71,6 +74,7 @@ class BugTrackerWidget extends LitElement {
     this.reporterEmail = ''
     this.reporterName = ''
     this.statusFilter = ''
+    this._activeStatuses = []
     this._menuOpen = false
     this._view = 'form'
     this._title = p.title || ''
@@ -117,21 +121,32 @@ class BugTrackerWidget extends LitElement {
     this._view = 'issues'
     this._menuOpen = false
     this._isOpen = true
+    // Seed active statuses from attribute on first open; don't reset on re-open
+    if (this._activeStatuses.length === 0) {
+      this._activeStatuses = this._parseStatusFilter()
+    }
     await this._fetchTickets()
   }
 
-  _statusFilterParams() {
-    if (!this.statusFilter) return ''
-    const valid = ['open', 'in_progress', 'resolved', 'closed']
+  _parseStatusFilter() {
+    if (!this.statusFilter) return []
     return this.statusFilter
       .split(',')
       .map(s => s.trim())
-      .filter(s => {
-        if (!valid.includes(s)) { console.warn(`bug-tracker-widget: unknown status "${s}" ignored`); return false }
-        return true
-      })
-      .map(s => `status[]=${encodeURIComponent(s)}`)
-      .join('&')
+      .filter(s => ALL_STATUSES.includes(s))
+  }
+
+  _toggleStatus(status) {
+    this._activeStatuses = this._activeStatuses.includes(status)
+      ? this._activeStatuses.filter(s => s !== status)
+      : [...this._activeStatuses, status]
+    this._ticketsPage = 1
+    this._fetchTickets()
+  }
+
+  _statusFilterParams() {
+    if (!this._activeStatuses.length) return ''
+    return this._activeStatuses.map(s => `status[]=${encodeURIComponent(s)}`).join('&')
   }
 
   async _fetchTickets() {
@@ -489,9 +504,25 @@ class BugTrackerWidget extends LitElement {
     `
   }
 
+  _renderStatusFilters() {
+    return html`
+      <div class="status-filters">
+        ${ALL_STATUSES.map(s => html`
+          <label class=${classMap({ 'status-chip': true, [`status-chip--${s}`]: true, 'status-chip--active': this._activeStatuses.includes(s) })}>
+            <input type="checkbox" class="sr-only"
+              .checked=${this._activeStatuses.includes(s)}
+              @change=${() => this._toggleStatus(s)} />
+            ${STATUS_LABELS[s]}
+          </label>
+        `)}
+      </div>
+    `
+  }
+
   _renderIssues() {
     return html`
       <div class="issues">
+        ${this._renderStatusFilters()}
         ${this._ticketsStatus === 'loading' ? html`
           <div class="issues-empty"><span class="spinner spinner--dark" aria-hidden="true"></span> Loading…</div>
         ` : this._ticketsStatus === 'error' ? html`
@@ -696,6 +727,15 @@ class BugTrackerWidget extends LitElement {
     .success-icon { width: 52px; height: 52px; border-radius: 50%; background: #f0fdf4; border: 1px solid #bbf7d0; display: flex; align-items: center; justify-content: center; color: #16a34a; margin-bottom: 1.25rem; }
     .success-title { font-size: 16px; font-weight: 600; color: #111; margin: 0 0 0.5rem; }
     .success-body { font-size: 14px; color: #6b7280; margin: 0; }
+
+    /* ── Status filter chips ── */
+    .status-filters { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 20px; border-bottom: 1px solid #f3f4f6; flex-shrink: 0; }
+    .status-chip { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 100px; font-size: 11.5px; font-weight: 500; cursor: pointer; border: 1px solid #e5e7eb; background: #f9fafb; color: #9ca3af; transition: all 0.12s; user-select: none; }
+    .status-chip:hover { border-color: #d1d5db; color: #6b7280; }
+    .status-chip--open.status-chip--active { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+    .status-chip--in_progress.status-chip--active { background: #fffbeb; color: #d97706; border-color: #fde68a; }
+    .status-chip--resolved.status-chip--active { background: #eff6ff; color: #3b82f6; border-color: #bfdbfe; }
+    .status-chip--closed.status-chip--active { background: #f3f4f6; color: #6b7280; border-color: #d1d5db; }
 
     /* ── Issues list ── */
     .issues { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
