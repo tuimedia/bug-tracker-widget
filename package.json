@@ -1,6 +1,6 @@
 {
   "name": "@tuimedia/bug-tracker-widget",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "type": "module",
   "main": "dist/bug-tracker-widget.js",
   "files": [
