@@ -37,6 +37,7 @@ class BugTrackerWidget extends LitElement {
     // Public attributes
     reporterEmail:        {},
     reporterName:         {},
+    statusFilter:         {},
     // Internal state
     _menuOpen:            { state: true },
     _view:                { state: true },
@@ -69,6 +70,7 @@ class BugTrackerWidget extends LitElement {
     const p = loadPersisted()
     this.reporterEmail = ''
     this.reporterName = ''
+    this.statusFilter = ''
     this._menuOpen = false
     this._view = 'form'
     this._title = p.title || ''
@@ -118,10 +120,25 @@ class BugTrackerWidget extends LitElement {
     await this._fetchTickets()
   }
 
+  _statusFilterParams() {
+    if (!this.statusFilter) return ''
+    const valid = ['open', 'in_progress', 'resolved', 'closed']
+    return this.statusFilter
+      .split(',')
+      .map(s => s.trim())
+      .filter(s => {
+        if (!valid.includes(s)) { console.warn(`bug-tracker-widget: unknown status "${s}" ignored`); return false }
+        return true
+      })
+      .map(s => `status[]=${encodeURIComponent(s)}`)
+      .join('&')
+  }
+
   async _fetchTickets() {
     this._ticketsStatus = 'loading'
     try {
-      const url = `/api/feedback/public/tickets/mine?reporterEmail=${encodeURIComponent(this.reporterEmail)}&page=${this._ticketsPage}&limit=${PAGE_LIMIT}`
+      const statusParams = this._statusFilterParams()
+      const url = `/api/feedback/public/tickets/mine?reporterEmail=${encodeURIComponent(this.reporterEmail)}&page=${this._ticketsPage}&limit=${PAGE_LIMIT}${statusParams ? `&${statusParams}` : ''}`
       const res = await fetch(url, { credentials: 'include' })
       if (!res.ok) throw new Error()
       const json = await res.json()
@@ -489,7 +506,7 @@ class BugTrackerWidget extends LitElement {
                 <div class="issue-row-main">
                   <span class="issue-title">${ticket.title}</span>
                   <span class="issue-date">${new Date(ticket.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-                  <span class="status-badge status-badge--${ticket.status}">${ticket.status}</span>
+                  <span class="status-badge status-badge--${ticket.status}">${ticket.status.replace('_', ' ')}</span>
                 </div>
               </div>
             `)}
@@ -525,7 +542,7 @@ class BugTrackerWidget extends LitElement {
         ` : t ? html`
           <div class="detail-body">
             <div class="detail-meta">
-              <span class="status-badge status-badge--${t.status}">${t.status}</span>
+              <span class="status-badge status-badge--${t.status}">${t.status.replace('_', ' ')}</span>
               ${t.environment ? html`<span class="detail-env">${t.environment}</span>` : ''}
               <span class="detail-date" style="margin-left:auto">${new Date(t.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
             </div>
