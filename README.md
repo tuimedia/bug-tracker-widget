@@ -181,3 +181,11 @@ git push origin v1.2.3
 ```
 
 The GitHub Actions workflow publishes automatically on tag push.
+
+**Note for pnpm consumers:** pnpm's safe-chain feature suppresses recently-published package versions due to a minimum package age check. If `pnpm install` doesn't pick up the new version after a publish, run:
+
+```bash
+pnpm install --safe-chain-skip-minimum-package-age
+```
+
+Commit the updated `pnpm-lock.yaml` — CI will fail with `ERR_PNPM_OUTDATED_LOCKFILE` if it's left out of sync.
