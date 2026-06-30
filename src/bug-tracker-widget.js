@@ -63,6 +63,10 @@ class BugTrackerWidget extends LitElement {
     _selectedTicket:      { state: true },
     _selectedTicketStatus:{ state: true },
     _showTechDetails:     { state: true },
+    _editMode:            { state: true },
+    _editDraft:           { state: true },
+    _editSaving:          { state: true },
+    _editError:           { state: true },
     // UI
     _isDragging:          { state: true },
     _isOpen:              { state: true },
@@ -93,6 +97,10 @@ class BugTrackerWidget extends LitElement {
     this._selectedTicket = null
     this._selectedTicketStatus = 'idle'
     this._showTechDetails = false
+    this._editMode = false
+    this._editDraft = {}
+    this._editSaving = false
+    this._editError = ''
     this._isDragging = false
     this._isOpen = false
   }
@@ -174,6 +182,9 @@ class BugTrackerWidget extends LitElement {
     this._selectedTicket = null
     this._selectedTicketStatus = 'loading'
     this._showTechDetails = false
+    this._editMode = false
+    this._editDraft = {}
+    this._editError = ''
     this._view = 'issue-detail'
     try {
       const res = await fetch(`/api/feedback/public/tickets/mine/${id}`, { credentials: 'include' })
@@ -182,6 +193,50 @@ class BugTrackerWidget extends LitElement {
       this._selectedTicketStatus = 'idle'
     } catch {
       this._selectedTicketStatus = 'error'
+    }
+  }
+
+  _startEdit() {
+    const t = this._selectedTicket
+    this._editDraft = {
+      title: t.title ?? '',
+      stepsToReproduce: t.stepsToReproduce ?? '',
+      expectedBehaviour: t.expectedBehaviour ?? '',
+      actualBehaviour: t.actualBehaviour ?? '',
+      status: t.status ?? 'open',
+    }
+    this._editError = ''
+    this._editMode = true
+  }
+
+  async _saveEdit() {
+    this._editSaving = true
+    this._editError = ''
+    try {
+      const res = await fetch(`/api/feedback/public/tickets/mine/${this._selectedTicket.id}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reporterEmail: this.reporterEmail || null,
+          title: this._editDraft.title || undefined,
+          stepsToReproduce: this._editDraft.stepsToReproduce || undefined,
+          expectedBehaviour: this._editDraft.expectedBehaviour || undefined,
+          actualBehaviour: this._editDraft.actualBehaviour || undefined,
+          status: this._editDraft.status,
+        }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.detail || `Unexpected error (${res.status})`)
+      }
+      this._selectedTicket = await res.json()
+      this._editMode = false
+      await this._fetchTickets()
+    } catch (err) {
+      this._editError = err.message || 'Something went wrong. Please try again.'
+    } finally {
+      this._editSaving = false
     }
   }
 
@@ -576,67 +631,98 @@ class BugTrackerWidget extends LitElement {
               <span class="status-badge status-badge--${t.status}">${t.status.replace('_', ' ')}</span>
               ${t.environment ? html`<span class="detail-env">${t.environment}</span>` : ''}
               <span class="detail-date" style="margin-left:auto">${new Date(t.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-            </div>
-            ${t.submittedUrl ? html`
-              <div class="detail-field">
-                <span class="detail-label">Page</span>
-                <span class="detail-value detail-value--mono">${t.submittedUrl}</span>
-              </div>
-            ` : ''}
-            <div class="detail-cols">
-              ${t.expectedBehaviour ? html`
-                <div class="detail-field">
-                  <span class="detail-label">Expected</span>
-                  <span class="detail-value detail-value--pre">${t.expectedBehaviour}</span>
-                </div>
-              ` : ''}
-              ${t.actualBehaviour ? html`
-                <div class="detail-field">
-                  <span class="detail-label">Actual</span>
-                  <span class="detail-value detail-value--pre">${t.actualBehaviour}</span>
-                </div>
+              ${!this._editMode ? html`
+                <button class="edit-btn" @click=${() => this._startEdit()}>Edit</button>
               ` : ''}
             </div>
-            ${t.stepsToReproduce ? html`
-              <div class="detail-field">
-                <span class="detail-label">Steps to reproduce</span>
-                <span class="detail-value detail-value--pre">${t.stepsToReproduce}</span>
-              </div>
-            ` : ''}
-            ${t.attachments?.length ? html`
-              <div class="detail-field">
-                <span class="detail-label">Screenshots</span>
-                <div class="detail-attachments">
-                  ${t.attachments.map(att => html`
-                    <a href=${attachmentUrl(att.url)} target="_blank" rel="noopener">
-                      <img src=${attachmentUrl(att.url)} alt=${att.filename} class="detail-thumb" />
-                    </a>
-                  `)}
+
+            ${this._editMode ? html`
+              <div class="edit-form">
+                ${this._editError ? html`<p class="edit-error">${this._editError}</p>` : ''}
+                <label class="edit-label">Title</label>
+                <input class="edit-input" .value=${this._editDraft.title} @input=${e => { this._editDraft = { ...this._editDraft, title: e.target.value } }} maxlength="500" />
+                <label class="edit-label">Steps to reproduce</label>
+                <textarea class="edit-textarea" .value=${this._editDraft.stepsToReproduce} @input=${e => { this._editDraft = { ...this._editDraft, stepsToReproduce: e.target.value } }} rows="4"></textarea>
+                <label class="edit-label">Expected behaviour</label>
+                <textarea class="edit-textarea" .value=${this._editDraft.expectedBehaviour} @input=${e => { this._editDraft = { ...this._editDraft, expectedBehaviour: e.target.value } }} rows="3"></textarea>
+                <label class="edit-label">Actual behaviour</label>
+                <textarea class="edit-textarea" .value=${this._editDraft.actualBehaviour} @input=${e => { this._editDraft = { ...this._editDraft, actualBehaviour: e.target.value } }} rows="3"></textarea>
+                <label class="edit-label">Status</label>
+                <select class="edit-select" .value=${this._editDraft.status} @change=${e => { this._editDraft = { ...this._editDraft, status: e.target.value } }}>
+                  <option value="open">Open</option>
+                  <option value="in_progress">In progress</option>
+                  <option value="resolved">Resolved</option>
+                  <option value="closed">Closed</option>
+                </select>
+                <div class="edit-actions">
+                  <button class="btn-save" ?disabled=${this._editSaving} @click=${() => this._saveEdit()}>
+                    ${this._editSaving ? 'Saving…' : 'Save changes'}
+                  </button>
+                  <button class="btn-cancel" @click=${() => { this._editMode = false }}>Cancel</button>
                 </div>
               </div>
-            ` : ''}
-            ${t.browser || t.viewport || t.userAgent ? html`
-              <div class="detail-field">
-                <button class="tech-toggle" @click=${() => { this._showTechDetails = !this._showTechDetails }}>
-                  ${this._showTechDetails ? 'Hide' : 'Show'} technical details
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true" class=${classMap({ chevron: true, 'chevron--up': this._showTechDetails })}>
-                    <path d="M18 15l-6-6-6 6"/>
-                  </svg>
-                </button>
-                ${this._showTechDetails ? html`
-                  <div class="detail-cols" style="margin-top:8px">
-                    ${t.browser ? html`<div class="detail-field"><span class="detail-label">Browser</span><span class="detail-value">${t.browser}</span></div>` : ''}
-                    ${t.viewport ? html`<div class="detail-field"><span class="detail-label">Viewport</span><span class="detail-value">${t.viewport}</span></div>` : ''}
-                    ${t.userAgent ? html`<div class="detail-field" style="grid-column:1/-1"><span class="detail-label">User agent</span><span class="detail-value detail-value--mono" style="font-size:11px;word-break:break-all">${t.userAgent}</span></div>` : ''}
+            ` : html`
+              ${t.submittedUrl ? html`
+                <div class="detail-field">
+                  <span class="detail-label">Page</span>
+                  <span class="detail-value detail-value--mono">${t.submittedUrl}</span>
+                </div>
+              ` : ''}
+              <div class="detail-cols">
+                ${t.expectedBehaviour ? html`
+                  <div class="detail-field">
+                    <span class="detail-label">Expected</span>
+                    <span class="detail-value detail-value--pre">${t.expectedBehaviour}</span>
+                  </div>
+                ` : ''}
+                ${t.actualBehaviour ? html`
+                  <div class="detail-field">
+                    <span class="detail-label">Actual</span>
+                    <span class="detail-value detail-value--pre">${t.actualBehaviour}</span>
                   </div>
                 ` : ''}
               </div>
-            ` : ''}
-            ${t.ghIssueUrl ? html`
-              <div class="detail-field">
-                <a href=${t.ghIssueUrl} target="_blank" rel="noopener" class="gh-link">View GitHub issue ↗</a>
-              </div>
-            ` : ''}
+              ${t.stepsToReproduce ? html`
+                <div class="detail-field">
+                  <span class="detail-label">Steps to reproduce</span>
+                  <span class="detail-value detail-value--pre">${t.stepsToReproduce}</span>
+                </div>
+              ` : ''}
+              ${t.attachments?.length ? html`
+                <div class="detail-field">
+                  <span class="detail-label">Screenshots</span>
+                  <div class="detail-attachments">
+                    ${t.attachments.map(att => html`
+                      <a href=${attachmentUrl(att.url)} target="_blank" rel="noopener">
+                        <img src=${attachmentUrl(att.url)} alt=${att.filename} class="detail-thumb" />
+                      </a>
+                    `)}
+                  </div>
+                </div>
+              ` : ''}
+              ${t.browser || t.viewport || t.userAgent ? html`
+                <div class="detail-field">
+                  <button class="tech-toggle" @click=${() => { this._showTechDetails = !this._showTechDetails }}>
+                    ${this._showTechDetails ? 'Hide' : 'Show'} technical details
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true" class=${classMap({ chevron: true, 'chevron--up': this._showTechDetails })}>
+                      <path d="M18 15l-6-6-6 6"/>
+                    </svg>
+                  </button>
+                  ${this._showTechDetails ? html`
+                    <div class="detail-cols" style="margin-top:8px">
+                      ${t.browser ? html`<div class="detail-field"><span class="detail-label">Browser</span><span class="detail-value">${t.browser}</span></div>` : ''}
+                      ${t.viewport ? html`<div class="detail-field"><span class="detail-label">Viewport</span><span class="detail-value">${t.viewport}</span></div>` : ''}
+                      ${t.userAgent ? html`<div class="detail-field" style="grid-column:1/-1"><span class="detail-label">User agent</span><span class="detail-value detail-value--mono" style="font-size:11px;word-break:break-all">${t.userAgent}</span></div>` : ''}
+                    </div>
+                  ` : ''}
+                </div>
+              ` : ''}
+              ${t.ghIssueUrl ? html`
+                <div class="detail-field">
+                  <a href=${t.ghIssueUrl} target="_blank" rel="noopener" class="gh-link">View GitHub issue ↗</a>
+                </div>
+              ` : ''}
+            `}
           </div>
         ` : ''}
       </div>
@@ -779,6 +865,24 @@ class BugTrackerWidget extends LitElement {
     .gh-link:hover { color: #111; }
     .tech-toggle { background: none; border: none; padding: 0; color: #9ca3af; font-family: inherit; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: color 0.12s; }
     .tech-toggle:hover { color: #6b7280; }
+
+    /* ── Edit form ── */
+    .edit-btn { margin-left: auto; background: none; border: 1px solid #e5e7eb; border-radius: 6px; color: #6b7280; font-family: inherit; font-size: 12px; padding: 3px 10px; cursor: pointer; transition: border-color 0.12s, color 0.12s; }
+    .edit-btn:hover { border-color: #9ca3af; color: #374151; }
+    .edit-form { display: flex; flex-direction: column; gap: 10px; }
+    .edit-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; }
+    .edit-input { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 10px; font-family: inherit; font-size: 14px; color: #111; outline: none; width: 100%; box-sizing: border-box; transition: border-color 0.15s; }
+    .edit-input:focus { border-color: #6b7280; background: #fff; }
+    .edit-textarea { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 10px; font-family: inherit; font-size: 13px; color: #111; outline: none; width: 100%; box-sizing: border-box; resize: vertical; transition: border-color 0.15s; }
+    .edit-textarea:focus { border-color: #6b7280; background: #fff; }
+    .edit-select { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 10px; font-family: inherit; font-size: 13px; color: #111; outline: none; width: 100%; box-sizing: border-box; }
+    .edit-actions { display: flex; gap: 8px; margin-top: 4px; }
+    .btn-save { padding: 8px 16px; border: none; border-radius: 8px; background: #111; color: #fff; font-family: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: opacity 0.12s; }
+    .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-save:hover:not(:disabled) { opacity: 0.85; }
+    .btn-cancel { padding: 8px 16px; border: 1px solid #e5e7eb; border-radius: 8px; background: transparent; color: #6b7280; font-family: inherit; font-size: 13.5px; cursor: pointer; transition: border-color 0.12s; }
+    .btn-cancel:hover { border-color: #9ca3af; color: #374151; }
+    .edit-error { margin: 0; font-size: 13px; color: #b91c1c; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 8px 10px; }
 
     /* ── Misc ── */
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
