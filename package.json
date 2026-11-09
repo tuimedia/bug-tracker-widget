@@ -1,6 +1,7 @@
 {
   "name": "@tuimedia/bug-tracker-widget",
   "version": "0.7.0",
+  "license": "MIT",
   "type": "module",
   "main": "dist/bug-tracker-widget.js",
   "files": [
